@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS / HTML Obfuscator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0b0f; --bg2:#0e1016; --panel:#14161d; --panel-2:#191c25; --elev:#1e222d;
+    --border:#262b36; --border-soft:#1f2430;
+    --text:#eef1f6; --muted:#8b93a3; --faint:#5c6473;
+    --accent:#7c8cff; --accent-2:#a06bff; --grad:linear-gradient(135deg,#7c8cff,#a06bff);
+    --ok:#53e0a0; --warn:#f6c357; --err:#ff8a8a;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(1200px 600px at 100% -10%, rgba(124,140,255,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(160,107,255,.08), transparent 55%),
+      var(--bg);
+    display:flex;flex-direction:column;min-height:100vh;
+  }
+
+  /* header */
+  header{display:flex;align-items:center;gap:13px;padding:18px 24px}
+  .logo{width:38px;height:38px;border-radius:11px;background:var(--grad);display:grid;place-items:center;
+    font-weight:800;color:#0a0b0f;font-size:17px;box-shadow:0 8px 22px rgba(124,140,255,.35)}
+  .brand h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .brand .sub{color:var(--muted);font-size:12.5px}
+  .spacer{flex:1}
+  .pill{font-size:11.5px;color:var(--muted);border:1px solid var(--border);border-radius:999px;
+    padding:6px 12px;display:inline-flex;gap:7px;align-items:center;white-space:nowrap}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(83,224,160,.15)}
+
+  /* banner */
+  .warn-banner{margin:0 24px 16px;background:rgba(246,195,87,.06);border:1px solid rgba(246,195,87,.22);
+    color:#f3d79a;padding:11px 14px;border-radius:12px;font-size:12.5px;display:flex;gap:11px;align-items:flex-start}
+  .warn-banner svg{flex:none;margin-top:1px}
+  .warn-banner b{color:#ffe6ad}
+
+  /* layout */
+  main{flex:1;display:grid;grid-template-columns:320px 1fr 1fr;gap:16px;padding:0 24px 16px;align-items:stretch}
+  @media(max-width:1000px){main{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--border-soft);
+    border-radius:var(--radius);display:flex;flex-direction:column;min-height:340px;overflow:hidden}
+  .card .hd{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--border-soft)}
+  .card .hd .title{font-size:13px;font-weight:650;letter-spacing:.01em}
+  .card .bd{padding:14px;display:flex;flex-direction:column;flex:1;gap:9px;min-height:0}
+
+  /* controls */
+  .controls .bd{gap:2px;overflow-y:auto}
+  .group-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);
+    margin:12px 4px 5px;font-weight:700}
+  .group-label:first-child{margin-top:0}
+  .opt{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px;
+    border-radius:10px;cursor:pointer;transition:background .15s}
+  .opt:hover{background:var(--panel-2)}
+  .opt .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .opt .lbl{font-size:13px;font-weight:550;display:flex;align-items:center;gap:7px}
+  .opt .desc{font-size:11.5px;color:var(--muted);line-height:1.4}
+  .badge{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--warn);
+    border:1px solid rgba(246,195,87,.35);border-radius:5px;padding:1px 5px;flex:none}
+  .opt input{position:absolute;opacity:0;width:0;height:0}
+  .sw{flex:none;width:40px;height:23px;border-radius:999px;background:var(--elev);border:1px solid var(--border);
+    position:relative;transition:background .18s,border-color .18s}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;
+    background:#d7dbe4;transition:transform .18s,background .18s}
+  .opt input:checked + .sw{background:var(--grad);border-color:transparent}
+  .opt input:checked + .sw::after{transform:translateX(17px);background:#fff}
+  .opt input:focus-visible + .sw{box-shadow:0 0 0 3px rgba(124,140,255,.4)}
+
+  /* segmented input-type control */
+  .segmented{display:flex;background:var(--elev);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px;margin:0 4px}
+  .segmented label{flex:1;text-align:center;border-radius:7px;padding:7px 0;font-size:12.5px;font-weight:600;
+    color:var(--muted);cursor:pointer;transition:.15s}
+  .segmented input{position:absolute;opacity:0;width:0;height:0}
+  .segmented label:has(input:checked){background:var(--grad);color:#0a0b0f}
+  .seg-desc{font-size:11.5px;color:var(--muted);margin:9px 6px 2px;line-height:1.4}
+
+  /* textareas */
+  textarea{flex:1;width:100%;resize:none;background:rgba(0,0,0,.28);color:var(--text);
+    border:1px solid var(--border-soft);border-radius:10px;padding:13px;font-family:var(--mono);
+    font-size:12.5px;line-height:1.6;tab-size:2;transition:border-color .15s,box-shadow .15s}
+  textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,140,255,.15)}
+  textarea::placeholder{color:var(--faint)}
+
+  /* buttons */
+  button{font-family:inherit;background:var(--elev);color:var(--text);border:1px solid var(--border);
+    border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
+  button:hover{border-color:#394152;background:var(--panel-2)}
+  button.primary{background:var(--grad);border:none;color:#0a0b0f;font-weight:700;padding:11px 26px;
+    font-size:14px;box-shadow:0 8px 24px rgba(124,140,255,.3)}
+  button.primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .stats{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+
+  /* run row */
+  .run-row{position:sticky;bottom:0;margin-top:auto;padding:14px 24px;background:rgba(10,11,15,.82);
+    backdrop-filter:blur(10px);border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .status{font-size:12.5px;color:var(--muted)}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)}
+
+  footer{padding:14px 24px 22px;color:var(--faint);font-size:11.5px}
+  footer a{color:var(--accent);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  /* presets */
+  .presets{display:flex;gap:7px;margin:0 2px 2px}
+  .preset{flex:1;background:var(--elev);border:1px solid var(--border);border-radius:10px;padding:9px 6px;cursor:pointer;text-align:center;transition:.15s}
+  .preset:hover{border-color:#394152;background:var(--panel-2)}
+  .preset .pt{font-size:12px;font-weight:650;color:var(--text);display:block}
+  .preset .ps{font-size:9.5px;color:var(--muted);margin-top:1px;display:block}
+  .preset.active{border-color:transparent;background:var(--grad)}
+  .preset.active .pt{color:#0a0b0f}
+  .preset.active .ps{color:rgba(10,11,15,.68)}
+
+  /* per-option info button */
+  .opt .meta{flex:1}
+  .info-btn{flex:none;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+    border:1px solid var(--border);color:var(--faint);font-size:11px;font-weight:700;cursor:pointer;
+    background:transparent;font-family:Georgia,"Times New Roman",serif;font-style:italic;line-height:1;transition:.15s}
+  .info-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(5,6,10,.62);backdrop-filter:blur(5px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal-overlay.open{display:flex}
+  .modal{max-width:470px;width:100%;background:linear-gradient(180deg,var(--panel),var(--bg2));
+    border:1px solid var(--border);border-radius:16px;padding:22px 22px 18px;
+    box-shadow:0 30px 90px rgba(0,0,0,.55);animation:pop .16s ease-out}
+  @keyframes pop{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+  .modal .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700}
+  .modal h3{margin:5px 0 12px;font-size:17px;letter-spacing:-.01em}
+  .modal .mbody{font-size:13px;color:var(--text);line-height:1.62}
+  .modal .mbody p{margin:0 0 10px}
+  .modal .mbody b{color:#fff}
+  .modal code{font-family:var(--mono);font-size:11.5px;background:rgba(255,255,255,.06);
+    border:1px solid var(--border-soft);padding:1px 5px;border-radius:5px}
+  .modal .caution{display:flex;gap:9px;background:rgba(246,195,87,.07);border:1px solid rgba(246,195,87,.22);
+    color:#f0d49a;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;margin-top:4px}
+  .modal .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#123;&#125;</div>
+  <div class="brand">
+    <h1>JS / HTML Obfuscator</h1>
+    <div class="sub">AST-safe transforms &middot; runs entirely in your browser</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="pill"><span class="dot"></span>Nothing leaves your browser</span>
+</header>
+
+<div class="warn-banner">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f6c357" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span><b>Reality check:</b> obfuscation makes code tedious to read, not impossible — anything that runs in a browser can be reverse-engineered. <b>Never ship secrets</b> (API keys, passwords, tokens) in client-side code; keep those on a server.</span>
+</div>
+
+<main>
+  <div class="card controls">
+    <div class="hd"><span class="title">Options</span></div>
+    <div class="bd">
+
+      <div class="group-label">Rename</div>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Rename local variables</span><span class="desc">Vars, params &amp; functions inside scopes → short hex names.</span></span>
+        <input type="checkbox" id="opt-rename-locals" checked><span class="sw"></span>
+      </label>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Rename top-level names <span class="badge">risky</span></span><span class="desc">Also renames globals. Breaks code called from HTML (onclick) or imported elsewhere.</span></span>
+        <input type="checkbox" id="opt-rename-globals"><span class="sw"></span>
+      </label>
+
+      <div class="group-label">Transform</div>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Encode strings</span><span class="desc">Moves all strings into an XOR + base64 lookup table.</span></span>
+        <input type="checkbox" id="opt-encode-strings" checked><span class="sw"></span>
+      </label>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Encode numbers</span><span class="desc">Integer literals → XOR expressions, e.g. 255 → (838^549).</span></span>
+        <input type="checkbox" id="opt-encode-numbers" checked><span class="sw"></span>
+      </label>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Inject junk / dead code</span><span class="desc">Adds unreachable branches &amp; unused functions to pad and confuse.</span></span>
+        <input type="checkbox" id="opt-dead-code"><span class="sw"></span>
+      </label>
+
+      <div class="group-label">Output</div>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Minify / compact</span><span class="desc">Strips comments and whitespace.</span></span>
+        <input type="checkbox" id="opt-compact" checked><span class="sw"></span>
+      </label>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Wrap in self-executing fn <span class="badge">risky</span></span><span class="desc">Hides the top scope. Globals you need elsewhere become inaccessible.</span></span>
+        <input type="checkbox" id="opt-iife"><span class="sw"></span>
+      </label>
+      <label class="opt">
+        <span class="meta"><span class="lbl">Self-defending <span class="badge">risky</span></span><span class="desc">Traps debuggers &amp; self-destructs if beautified. Apply last — never reformat afterward.</span></span>
+        <input type="checkbox" id="opt-self-defend"><span class="sw"></span>
+      </label>
+
+      <div class="group-label">Input type</div>
+      <div class="segmented">
+        <label><input type="radio" name="mode" id="mode-js" checked><span>JavaScript</span></label>
+        <label><input type="radio" name="mode" id="mode-html"><span>HTML</span></label>
+      </div>
+      <p class="seg-desc">HTML mode obfuscates JS inside inline &lt;script&gt; tags; markup &amp; external scripts are left untouched.</p>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd">
+      <span class="title">Input</span>
+      <span class="spacer"></span>
+      <button id="btn-sample">Sample</button>
+      <button id="btn-clear">Clear</button>
+    </div>
+    <div class="bd">
+      <textarea id="input" placeholder="Paste your JavaScript (or HTML) here…" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd">
+      <span class="title">Output</span>
+      <span class="stats" id="stats"></span>
+      <span class="spacer"></span>
+      <button id="btn-copy">Copy</button>
+      <button id="btn-download">Download</button>
+    </div>
+    <div class="bd">
+      <textarea id="output" placeholder="Obfuscated code appears here…" spellcheck="false" readonly></textarea>
+    </div>
+  </div>
+</main>
+
+<div class="run-row">
+  <button class="primary" id="btn-run">Obfuscate &#9656;</button>
+  <span class="status" id="status">Ready.</span>
+</div>
+
+<footer>
+  Built with the Babel parser for safe AST transforms. Host it on GitHub Pages as-is.
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  const Babel = window.Babel;
+
+  // ---- helpers ---------------------------------------------------------
+  function randHex(n){ let s=""; for(let i=0;i<n;i++) s+="0123456789abcdef"[(Math.random()*16)|0]; return s; }
+
+  // Parse a snippet of source into an array of AST statements.
+  function parseBody(src){ return Babel.transform(src, {ast:true, code:false, sourceType:"script"}).ast.program.body; }
+
+  // A junk function that is never called (pure padding).
+  function makeJunkFn(name){
+    const a="_0x"+randHex(3), b="_0x"+randHex(3), r="_0x"+randHex(3);
+    const src = "function "+name+"("+a+","+b+"){var "+r+"="+a+";for(var _i=0;_i<"+b+";_i++){"+
+                r+"=("+r+"^_i)+"+a+";}return "+r+">0?"+r+":\"x"+randHex(2)+"\";}";
+    return parseBody(src)[0];
+  }
+
+  // A dead branch guarded by an always-false, non-constant-foldable predicate.
+  function makeDeadBranch(flagName){
+    const a="_0x"+randHex(4), b="_0x"+randHex(4);
+    const src = "if("+flagName+"==="+flagName+"+1){let "+a+"=\"j"+randHex(3)+"\";let "+b+"="+
+                (Math.floor(Math.random()*900)+1)+";console.log("+a+","+b+");}";
+    return parseBody(src)[0];
+  }
+
+  // Anti-tamper prelude: self-destructs if beautified, and traps debuggers.
+  // Kept CSP-safe (no eval / Function constructor) so it works inside extensions.
+  const SELF_DEFEND =
+    '(function(){var _c=function _c(){var _t=_c.toString();' +
+    'if(_t.indexOf("\\n")!==-1||/ {2,}/.test(_t)){(function _r(){return _r();})();}};' +
+    '_c();try{setInterval(function(){debugger;},100);}catch(_e){}})();';
+
+  // XOR bytes with key, then base64. Mirrors the embedded decoder exactly.
+  function encodeString(str, key){
+    const bytes = Array.from(new TextEncoder().encode(str));
+    for(let i=0;i<bytes.length;i++) bytes[i] ^= key[i % key.length];
+    let bin = "";
+    for(const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  }
+
+  function shuffle(indices){
+    for(let i=indices.length-1;i>0;i--){
+      const j=(Math.random()*(i+1))|0;
+      [indices[i],indices[j]]=[indices[j],indices[i]];
+    }
+    return indices;
+  }
+
+  // ---- the Babel plugin ------------------------------------------------
+  function makePlugin(opts){
+    return function(babel){
+      const t = babel.types;
+      return {
+        name: "obfuscate",
+        visitor: {
+          Program: {
+            enter(path){
+              // 1. rename identifiers
+              if(opts.renameLocals){
+                path.traverse({
+                  Scopable(p){
+                    if(p.isProgram()) return; // top scope handled below
+                    renameOwnBindings(p);
+                  }
+                });
+              }
+              if(opts.renameGlobals){
+                renameOwnBindings(path);
+              }
+
+              function renameOwnBindings(p){
+                const bindings = p.scope.bindings;
+                for(const name of Object.keys(bindings)){
+                  const newName = p.scope.generateUid("0x"+randHex(4));
+                  p.scope.rename(name, newName);
+                }
+              }
+
+              // 1b. inject junk / dead code
+              if(opts.deadCode){
+                const flagName = path.scope.generateUid("0x"+randHex(4));
+                const injected = [ parseBody("var "+flagName+"=Date.now();")[0] ];
+                for(let i=0;i<3;i++){
+                  injected.push( makeJunkFn(path.scope.generateUid("0x"+randHex(3))) );
+                }
+                path.unshiftContainer("body", injected);
+                path.traverse({
+                  "FunctionDeclaration|FunctionExpression|ArrowFunctionExpression"(p){
+                    if(!p.get("body").isBlockStatement()) return;
+                    p.get("body").unshiftContainer("body", makeDeadBranch(flagName));
+                  }
+                });
+              }
+
+              // 1c. encode numeric literals into XOR expressions
+              if(opts.encodeNumbers){
+                path.traverse({
+                  NumericLiteral(p){
+                    if(p.node.__obf) return;
+                    const val = p.node.value;
+                    if(!Number.isInteger(val) || val < 0 || val > 0x7fffffff) return; // safe for bitwise XOR
+                    const parent = p.parentPath;
+                    if(parent.node && parent.node.key === p.node && parent.node.computed === false){
+                      parent.node.computed = true;
+                    }
+                    const k = (Math.random()*0x10000)|0;
+                    const enc = (val ^ k) >>> 0;
+                    const mk = n => { const nl = t.numericLiteral(n); nl.__obf = true; return nl; };
+                    p.replaceWith(t.binaryExpression("^", mk(enc), mk(k)));
+                    p.skip();
+                  }
+                });
+              }
+
+              // 2. encode strings
+              if(opts.encodeStrings){
+                const strings = [];
+                const map = new Map();
+                const decName = path.scope.generateUid("0x"+randHex(5));
+
+                path.traverse({
+                  StringLiteral(p){
+                    const parent = p.parentPath;
+                    // skip import/export module specifiers (must stay literal)
+                    if(parent.isImportDeclaration() || parent.isExportDeclaration() ||
+                       parent.isExportAllDeclaration() || parent.isImportExpression()) return;
+                    // skip strings we've already injected
+                    if(p.node.__obf) return;
+
+                    const value = p.node.value;
+                    let idx = map.get(value);
+                    if(idx === undefined){ idx = strings.length; strings.push(value); map.set(value, idx); }
+
+                    // if this string is a non-computed object/class key, make it computed
+                    if(parent.node && parent.node.key === p.node && parent.node.computed === false){
+                      parent.node.computed = true;
+                    }
+
+                    const call = t.callExpression(t.identifier(decName), [t.numericLiteral(idx)]);
+                    p.replaceWith(call);
+                    p.skip();
+                  }
+                });
+
+                if(strings.length){
+                  // build a shuffled table so array index != source order
+                  const key = Array.from({length:8}, ()=> (Math.random()*256)|0 );
+                  const order = shuffle(strings.map((_,i)=>i));
+                  const slot = new Array(strings.length);
+                  order.forEach((srcIdx, pos)=>{ slot[srcIdx] = pos; });
+                  const encodedTable = new Array(strings.length);
+                  strings.forEach((s,srcIdx)=>{ encodedTable[slot[srcIdx]] = encodeString(s, key); });
+
+                  // rewrite every decoder call's index to point at the shuffled slot
+                  path.traverse({
+                    CallExpression(p){
+                      if(p.node.callee.type==="Identifier" && p.node.callee.name===decName){
+                        const arg = p.node.arguments[0];
+                        if(arg && arg.type==="NumericLiteral"){ arg.value = slot[arg.value]; }
+                      }
+                    }
+                  });
+
+                  const arrName = path.scope.generateUid("0x"+randHex(5));
+                  const keyName = path.scope.generateUid("0x"+randHex(4));
+                  const helperSrc =
+                    "var "+arrName+" = "+JSON.stringify(encodedTable)+";\n"+
+                    "var "+keyName+" = "+JSON.stringify(key)+";\n"+
+                    "function "+decName+"(i){var s=atob("+arrName+"[i]);var b=[];"+
+                    "for(var j=0;j<s.length;j++){b.push(s.charCodeAt(j)^"+keyName+"[j%"+keyName+".length]);}"+
+                    "return new TextDecoder().decode(new Uint8Array(b));}";
+
+                  const helperAst = Babel.transform(helperSrc, {ast:true, code:false, sourceType:"script"}).ast;
+                  // mark injected string literals so we don't re-encode them
+                  helperAst.program.body.forEach(function tag(node){
+                    JSON.stringify(node, function(k,v){
+                      if(v && typeof v==="object" && v.type==="StringLiteral") v.__obf = true;
+                      return v;
+                    });
+                  });
+                  path.unshiftContainer("body", helperAst.program.body);
+                }
+              }
+            }
+          }
+        }
+      };
+    };
+  }
+
+  // ---- obfuscate one JS string ----------------------------------------
+  function obfuscateJs(code, opts){
+    const result = Babel.transform(code, {
+      sourceType: "unambiguous",
+      compact: !!opts.compact,
+      comments: !opts.compact,
+      plugins: [ makePlugin(opts) ],
+      parserOpts: { allowReturnOutsideFunction: true }
+    });
+    let out = result.code;
+    if(opts.iife) out = "(function(){" + out + "})();";
+    if(opts.selfDefend) out = SELF_DEFEND + out;
+    return out;
+  }
+
+  // ---- obfuscate HTML (inline scripts only) ----------------------------
+  function obfuscateHtml(html, opts){
+    return html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, function(m, attrs, body){
+      if(/\bsrc\s*=/.test(attrs)) return m;                 // external script
+      if(/\btype\s*=/.test(attrs) && !/type\s*=\s*["']?(?:text\/javascript|application\/javascript|module)\b/i.test(attrs)) return m; // non-JS (e.g. JSON/template)
+      if(!body.trim()) return m;
+      try { return "<script"+attrs+">"+obfuscateJs(body, opts)+"<\/script>"; }
+      catch(e){ throw new Error("In an inline <script>: " + e.message); }
+    });
+  }
+
+  // ---- UI wiring -------------------------------------------------------
+  const $ = id => document.getElementById(id);
+  const inEl=$("input"), outEl=$("output"), statusEl=$("status"), statsEl=$("stats");
+
+  function readOpts(){
+    return {
+      renameLocals:  $("opt-rename-locals").checked,
+      renameGlobals: $("opt-rename-globals").checked,
+      encodeStrings: $("opt-encode-strings").checked,
+      encodeNumbers: $("opt-encode-numbers").checked,
+      deadCode:      $("opt-dead-code").checked,
+      compact:       $("opt-compact").checked,
+      iife:          $("opt-iife").checked,
+      selfDefend:    $("opt-self-defend").checked
+    };
+  }
+
+  function setStatus(msg, cls){ statusEl.textContent=msg; statusEl.className="status"+(cls?" "+cls:""); }
+
+  $("btn-run").addEventListener("click", function(){
+    const code = inEl.value;
+    if(!code.trim()){ setStatus("Nothing to obfuscate.", "err"); return; }
+    const opts = readOpts();
+    const isHtml = $("mode-html").checked;
+    setStatus("Working…");
+    // defer so the status paints before the (synchronous) transform
+    setTimeout(function(){
+      try{
+        const out = isHtml ? obfuscateHtml(code, opts) : obfuscateJs(code, opts);
+        outEl.value = out;
+        const ratio = code.length ? Math.round(out.length/code.length*100) : 0;
+        statsEl.textContent = code.length + " → " + out.length + " chars (" + ratio + "%)";
+        setStatus("Done.", "ok");
+      }catch(e){
+        outEl.value = "";
+        statsEl.textContent = "";
+        setStatus("Error: " + e.message, "err");
+      }
+    }, 10);
+  });
+
+  $("btn-copy").addEventListener("click", async function(){
+    if(!outEl.value) return;
+    try{ await navigator.clipboard.writeText(outEl.value); setStatus("Copied to clipboard.", "ok"); }
+    catch(e){ outEl.select(); document.execCommand("copy"); setStatus("Copied.", "ok"); }
+  });
+
+  $("btn-download").addEventListener("click", function(){
+    if(!outEl.value) return;
+    const isHtml = $("mode-html").checked;
+    const blob = new Blob([outEl.value], {type:"text/plain"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download = isHtml ? "obfuscated.html" : "obfuscated.js";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $("btn-clear").addEventListener("click", function(){ inEl.value=""; outEl.value=""; statsEl.textContent=""; setStatus("Cleared."); });
+
+  $("btn-sample").addEventListener("click", function(){
+    $("mode-js").checked = true;
+    inEl.value =
+'// Simple demo module\n'+
+'function greet(name) {\n'+
+'  const message = "Hello, " + name + "!";\n'+
+'  console.log(message);\n'+
+'  return message;\n'+
+'}\n\n'+
+'const users = ["Ada", "Alan", "Grace"];\n'+
+'users.forEach(function(u) {\n'+
+'  greet(u);\n'+
+'});\n';
+    setStatus("Sample loaded.");
+  });
+
+  // ---- option explanations ---------------------------------------------
+  // def:true => on by default (no confirm pop-up when toggled on).
+  const OPT_INFO = {
+    "opt-rename-locals": { name:"Rename local variables", def:true,
+      html:"<p>Renames every variable, parameter, and function declared <b>inside</b> a scope (function bodies, blocks) to short meaningless names like <code>_0x3f9a</code>. All references are updated through Babel's scope analysis, so the behavior is identical.</p><p>Top-level / global names are deliberately left alone, so your code can still be called from HTML or other files. Safe to leave on.</p>" },
+    "opt-rename-globals": { name:"Rename top-level names", def:false,
+      html:"<p>Extends renaming to names declared at the <b>top level</b> of the file — global functions, <code>const</code>/<code>let</code>, and classes.</p><p>This is the strongest renaming, but it changes names other code may rely on, which is why it's off by default.</p>",
+      caution:"Only for fully self-contained code. If anything outside the file reaches these names — inline <code>onclick</code> handlers, other <code>&lt;script&gt;</code> files, or module exports — it will break." },
+    "opt-encode-strings": { name:"Encode strings", def:true,
+      html:"<p>Every string literal is removed from the code and placed in a lookup table, scrambled with a random XOR key and base64-encoded. Each original string becomes a call like <code>_d(3)</code> that decodes at runtime.</p><p>This stops anyone from reading your text, URLs, or messages by skimming the source. It's CSP-safe (no <code>eval</code>). Note: the decoder ships with the code, so strings can still be recovered by running it.</p>" },
+    "opt-encode-numbers": { name:"Encode numbers", def:true,
+      html:"<p>Replaces integer literals with equivalent XOR expressions — e.g. <code>255</code> becomes <code>(838 ^ 549)</code> — which evaluate to the same value. Floats and BigInts are left unchanged.</p><p>Makes constants like status codes, offsets, and limits harder to spot.</p>" },
+    "opt-dead-code": { name:"Inject junk / dead code", def:false,
+      html:"<p>Injects decoy code that never executes: unused functions, plus branches guarded by an always-false condition (<code>flag === flag + 1</code>) that minifiers can't fold away.</p><p>It pads and muddies the output so the real logic is harder to follow.</p>",
+      caution:"Increases output size. The decoy code is inert, so your program's behavior is unchanged." },
+    "opt-compact": { name:"Minify / compact", def:true,
+      html:"<p>Strips all comments and whitespace and prints the result on as few lines as possible. Smaller file, and nothing left to read structurally.</p><p>Keep this on if you use <b>Self-defending</b>, which checks the code's formatting.</p>" },
+    "opt-iife": { name:"Wrap in self-executing function", def:false,
+      html:"<p>Wraps the whole program in <code>(function(){ … })()</code> so your top-level names become private to that function and disappear from the global scope.</p><p>Good for isolation — but anything that must be reachable from outside will no longer exist.</p>",
+      caution:"Any global your HTML or other scripts rely on will vanish. Don't use it for code that must expose names." },
+    "opt-self-defend": { name:"Self-defending", def:false,
+      html:"<p>Adds two guards: (1) a <code>debugger</code> trap on a timer that makes stepping through the code in DevTools painful, and (2) a runtime self-check that <b>crashes the script if the code has been beautified or reformatted</b>.</p><p>It's CSP-safe, so it works inside extensions.</p>",
+      caution:"Apply this last. If the output is ever beautified, re-minified, or reformatted by a bundler, it will intentionally crash. Keep <b>Minify</b> on." }
+  };
+
+  // ---- presets ---------------------------------------------------------
+  const PRESETS = {
+    light:    { label:"Light",       sub:"quick & safe", on:["opt-rename-locals","opt-compact"] },
+    balanced: { label:"Recommended", sub:"balanced",     on:["opt-rename-locals","opt-encode-strings","opt-encode-numbers","opt-compact"] },
+    maximum:  { label:"Maximum",     sub:"hardest",      on:["opt-rename-locals","opt-encode-strings","opt-encode-numbers","opt-dead-code","opt-compact","opt-self-defend"] }
+  };
+  const ALL_OPTS = Object.keys(OPT_INFO);
+
+  function clearActivePreset(){ document.querySelectorAll(".preset").forEach(b=>b.classList.remove("active")); }
+  function applyPreset(key){
+    const p = PRESETS[key];
+    ALL_OPTS.forEach(id => { $(id).checked = p.on.includes(id); }); // direct set => no confirm pop-ups
+    clearActivePreset();
+    const btn = document.querySelector('.preset[data-key="'+key+'"]');
+    if(btn) btn.classList.add("active");
+    setStatus("Applied the “"+p.label+"” preset.", "ok");
+  }
+
+  // ---- build preset row + per-option info buttons ----------------------
+  const bd = document.querySelector(".controls .bd");
+  const presetWrap = document.createElement("div");
+  presetWrap.className = "presets";
+  Object.entries(PRESETS).forEach(([key,p])=>{
+    const b = document.createElement("button");
+    b.className = "preset"; b.dataset.key = key;
+    b.innerHTML = '<span class="pt">'+p.label+'</span><span class="ps">'+p.sub+'</span>';
+    b.addEventListener("click", ()=>applyPreset(key));
+    presetWrap.appendChild(b);
+  });
+  const presetLabel = document.createElement("div");
+  presetLabel.className = "group-label"; presetLabel.textContent = "Presets";
+  bd.insertBefore(presetWrap, bd.firstChild);
+  bd.insertBefore(presetLabel, bd.firstChild);
+
+  document.querySelectorAll(".opt").forEach(opt=>{
+    const cb = opt.querySelector('input[type="checkbox"]');
+    if(!cb || !OPT_INFO[cb.id]) return;
+    const info = document.createElement("span");
+    info.className = "info-btn"; info.textContent = "i";
+    info.title = "What does this do?";
+    info.setAttribute("role","button"); info.tabIndex = 0;
+    const open = e => { e.preventDefault(); e.stopPropagation(); openModal(cb.id, "info"); };
+    info.addEventListener("click", open);
+    info.addEventListener("keydown", e => { if(e.key==="Enter"||e.key===" ") open(e); });
+    opt.querySelector(".meta").after(info);
+    // confirm pop-up when enabling an off-by-default option
+    cb.addEventListener("change", ()=>{
+      if(!OPT_INFO[cb.id].def && cb.checked) openModal(cb.id, "confirm", cb);
+      clearActivePreset();
+    });
+  });
+
+  // ---- explanation / confirm modal -------------------------------------
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = '<div class="modal" role="dialog" aria-modal="true">' +
+    '<div class="k"></div><h3></h3><div class="mbody"></div><div class="foot"></div></div>';
+  document.body.appendChild(overlay);
+  const mK = overlay.querySelector(".k"), mTitle = overlay.querySelector("h3"),
+        mBody = overlay.querySelector(".mbody"), mFoot = overlay.querySelector(".foot");
+  let modalState = null;
+
+  function mkBtn(label, cls, fn){
+    const b = document.createElement("button");
+    if(cls) b.className = cls;
+    b.innerHTML = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+  function openModal(id, mode, cb){
+    const info = OPT_INFO[id];
+    modalState = { mode, cb };
+    mK.textContent = mode==="confirm" ? "Turn on this option?" : "About this option";
+    mTitle.textContent = info.name;
+    mBody.innerHTML = info.html + (info.caution ? '<div class="caution"><span>⚠</span><span>'+info.caution+'</span></div>' : "");
+    mFoot.innerHTML = "";
+    if(mode==="confirm"){
+      mFoot.append(
+        mkBtn("Cancel", "", dismiss),
+        mkBtn("Enable this option", "primary", closeModal)
+      );
+    } else {
+      mFoot.append(mkBtn("Got it", "primary", closeModal));
+    }
+    overlay.classList.add("open");
+  }
+  function closeModal(){ overlay.classList.remove("open"); modalState = null; }
+  function dismiss(){ // cancel: revert the toggle if this was an enable-confirm
+    if(modalState && modalState.mode==="confirm" && modalState.cb) modalState.cb.checked = false;
+    closeModal();
+  }
+  overlay.addEventListener("click", e => { if(e.target===overlay) dismiss(); });
+  document.addEventListener("keydown", e => { if(e.key==="Escape" && overlay.classList.contains("open")) dismiss(); });
+
+  // start on the recommended preset's highlight (matches the default toggles)
+  document.querySelector('.preset[data-key="balanced"]').classList.add("active");
+})();
+</script>
+</body>
+</html>
